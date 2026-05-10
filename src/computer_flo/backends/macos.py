@@ -154,7 +154,7 @@ class PeekabooBackend:
             return None
         try:
             proc = subprocess.Popen(
-                [path],
+                [path, "--hide-system"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,

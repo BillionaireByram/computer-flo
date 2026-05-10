@@ -2,66 +2,70 @@ import AppKit
 import CoreGraphics
 
 final class GlowView: NSView {
-    var color = NSColor(calibratedRed: 0.0, green: 0.72, blue: 1.0, alpha: 1.0)
+    private let core = NSColor(calibratedRed: 0.50, green: 0.91, blue: 1.0, alpha: 1.0)
+    private let neon = NSColor(calibratedRed: 0.00, green: 0.63, blue: 1.0, alpha: 1.0)
+    private let deep = NSColor(calibratedRed: 0.00, green: 0.28, blue: 1.0, alpha: 1.0)
 
     override var isOpaque: Bool { false }
+
+    private func cursorPath() -> CGMutablePath {
+        // Hollow neon pointer based on the supplied reference image.
+        // Coordinates are in a regular-cursor-sized 48x48 overlay window. The arrow tip is
+        // also the mouse hot spot, so the visual pointer tracks the real target.
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 12.5, y: 35.5))   // sharp upper-left tip / hot spot
+        path.addLine(to: CGPoint(x: 16.0, y: 9.5))
+        path.addLine(to: CGPoint(x: 22.0, y: 16.5))
+        path.addLine(to: CGPoint(x: 31.0, y: 7.5))
+        path.addLine(to: CGPoint(x: 35.0, y: 11.0))
+        path.addLine(to: CGPoint(x: 26.0, y: 21.0))
+        path.addLine(to: CGPoint(x: 35.5, y: 22.5))
+        path.closeSubpath()
+        return path
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.clear.setFill()
         dirtyRect.fill()
 
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let path = cursorPath()
 
         ctx.saveGState()
         ctx.setBlendMode(.plusLighter)
+        ctx.setLineJoin(.round)
+        ctx.setLineCap(.round)
 
-        // Outer electric glow rings.
-        for i in 0..<5 {
-            let radius = CGFloat(10.0 + Double(i) * 4.5)
-            let alpha = CGFloat(0.22 - Double(i) * 0.035)
-            ctx.setStrokeColor(color.withAlphaComponent(alpha).cgColor)
-            ctx.setLineWidth(CGFloat(3.5 - Double(i) * 0.35))
-            ctx.strokeEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+        // Soft blue halo, like a neon cursor tube blooming on a black background.
+        for layer in 0..<4 {
+            ctx.saveGState()
+            let blur = CGFloat(9.5 - Double(layer) * 1.5)
+            let alpha = CGFloat(0.22 + Double(layer) * 0.055)
+            ctx.setShadow(offset: .zero, blur: blur, color: deep.withAlphaComponent(alpha).cgColor)
+            ctx.setStrokeColor(deep.withAlphaComponent(alpha).cgColor)
+            ctx.setLineWidth(CGFloat(5.2 - Double(layer) * 1.0))
+            ctx.addPath(path)
+            ctx.strokePath()
+            ctx.restoreGState()
         }
 
-        // Futuristic triangular cursor / pointer.
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: center.x - 1.5, y: center.y + 15.5))
-        path.addLine(to: CGPoint(x: center.x + 11.5, y: center.y - 12.5))
-        path.addLine(to: CGPoint(x: center.x + 1.5, y: center.y - 8.0))
-        path.addLine(to: CGPoint(x: center.x - 5.5, y: center.y - 18.0))
-        path.closeSubpath()
-
-        ctx.setShadow(offset: .zero, blur: 9, color: color.withAlphaComponent(0.95).cgColor)
-        ctx.setFillColor(NSColor(calibratedRed: 0.02, green: 0.08, blue: 0.16, alpha: 0.88).cgColor)
-        ctx.addPath(path)
-        ctx.fillPath()
-
-        ctx.setShadow(offset: .zero, blur: 5, color: color.withAlphaComponent(1.0).cgColor)
-        ctx.setStrokeColor(color.cgColor)
-        ctx.setLineWidth(1.4)
+        // Saturated middle neon stroke.
+        ctx.saveGState()
+        ctx.setShadow(offset: .zero, blur: 4.8, color: neon.withAlphaComponent(0.85).cgColor)
+        ctx.setStrokeColor(neon.withAlphaComponent(0.86).cgColor)
+        ctx.setLineWidth(2.6)
         ctx.addPath(path)
         ctx.strokePath()
+        ctx.restoreGState()
 
-        // Core dot and crosshair ticks.
-        ctx.setShadow(offset: .zero, blur: 6, color: color.cgColor)
-        ctx.setFillColor(NSColor.white.withAlphaComponent(0.92).cgColor)
-        ctx.fillEllipse(in: CGRect(x: center.x - 1.5, y: center.y - 1.5, width: 3, height: 3))
-
-        ctx.setStrokeColor(color.withAlphaComponent(0.75).cgColor)
-        ctx.setLineWidth(1.5)
-        let tick: CGFloat = 6.5
-        let gap: CGFloat = 3.5
-        ctx.move(to: CGPoint(x: center.x - tick, y: center.y))
-        ctx.addLine(to: CGPoint(x: center.x - gap, y: center.y))
-        ctx.move(to: CGPoint(x: center.x + gap, y: center.y))
-        ctx.addLine(to: CGPoint(x: center.x + tick, y: center.y))
-        ctx.move(to: CGPoint(x: center.x, y: center.y - tick))
-        ctx.addLine(to: CGPoint(x: center.x, y: center.y - gap))
-        ctx.move(to: CGPoint(x: center.x, y: center.y + gap))
-        ctx.addLine(to: CGPoint(x: center.x, y: center.y + tick))
+        // Crisp cyan-white core line. No fill: the interior remains transparent.
+        ctx.saveGState()
+        ctx.setShadow(offset: .zero, blur: 2.0, color: core.withAlphaComponent(0.9).cgColor)
+        ctx.setStrokeColor(core.cgColor)
+        ctx.setLineWidth(1.15)
+        ctx.addPath(path)
         ctx.strokePath()
+        ctx.restoreGState()
 
         ctx.restoreGState()
     }
@@ -70,7 +74,8 @@ final class GlowView: NSView {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
     var timer: Timer!
-    let size = NSSize(width: 75, height: 75)
+    let size = NSSize(width: 48, height: 48)
+    let hotSpot = NSPoint(x: 12.5, y: 35.5)
     var hideSystemCursor = CommandLine.arguments.contains("--hide-system")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -78,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let mouse = NSEvent.mouseLocation
         window = NSWindow(
-            contentRect: NSRect(x: mouse.x - size.width / 2, y: mouse.y - size.height / 2, width: size.width, height: size.height),
+            contentRect: NSRect(x: mouse.x - hotSpot.x, y: mouse.y - hotSpot.y, width: size.width, height: size.height),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -102,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func followMouse() {
         let mouse = NSEvent.mouseLocation
-        window.setFrameOrigin(NSPoint(x: mouse.x - size.width / 2, y: mouse.y - size.height / 2))
+        window.setFrameOrigin(NSPoint(x: mouse.x - hotSpot.x, y: mouse.y - hotSpot.y))
         window.contentView?.needsDisplay = true
     }
 
