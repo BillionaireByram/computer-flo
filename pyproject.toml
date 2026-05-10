@@ -1,0 +1,35 @@
+[project]
+name = "computer-flo"
+version = "0.4.0"
+description = "Visible-computer control runtime for AI agents"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+authors = [
+  { name = "BillionaireByram" }
+]
+keywords = ["computer-use", "agents", "mcp", "desktop-automation", "vnc", "x11", "macos"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/BillionaireByram/computer-flo"
+Repository = "https://github.com/BillionaireByram/computer-flo"
+Documentation = "https://github.com/BillionaireByram/computer-flo#readme"
+
+[project.scripts]
+computer-flo = "computer_flo.cli:main"
+computer-flo-visible = "computer_flo.visible_cli:main"
+computer-flo-mcp = "computer_flo.mcp_server:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
