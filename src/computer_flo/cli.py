@@ -19,10 +19,21 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("observe")
     add_common(p)
 
+    p = sub.add_parser("move")
+    p.add_argument("x", type=int)
+    p.add_argument("y", type=int)
+    p.add_argument("--human-like", action="store_true", help="use OpenHuman-inspired smooth/human cursor path")
+    p.add_argument("--start-x", type=int, help="optional starting X for planned human path")
+    p.add_argument("--start-y", type=int, help="optional starting Y for planned human path")
+    add_common(p)
+
     p = sub.add_parser("click")
     p.add_argument("x", type=int)
     p.add_argument("y", type=int)
     p.add_argument("--button", type=int, default=1)
+    p.add_argument("--human-like", action="store_true", help="use smoother/human cursor movement where supported")
+    p.add_argument("--start-x", type=int, help="optional starting X for planned human path")
+    p.add_argument("--start-y", type=int, help="optional starting Y for planned human path")
     add_common(p)
 
     p = sub.add_parser("type")
@@ -43,6 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("end_x", type=int)
     p.add_argument("end_y", type=int)
     p.add_argument("--button", type=int, default=1)
+    p.add_argument("--human-like", action="store_true", help="use smoother/human drag where supported")
     add_common(p)
 
     p = sub.add_parser("screenshot")
@@ -79,8 +91,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "observe":
         payload = {"ok": True, "operation": "observe", **backend.observe()}
+    elif args.command == "move":
+        payload = {"ok": True, "operation": "move", "result": backend.move(args.x, args.y, execute=args.execute, human_like=args.human_like, start_x=args.start_x, start_y=args.start_y)}
     elif args.command == "click":
-        payload = {"ok": True, "operation": "click", "result": backend.click(args.x, args.y, args.button, execute=args.execute)}
+        payload = {"ok": True, "operation": "click", "result": backend.click(args.x, args.y, args.button, execute=args.execute, human_like=args.human_like, start_x=args.start_x, start_y=args.start_y)}
     elif args.command == "type":
         payload = {"ok": True, "operation": "type", "result": backend.type_text(args.text, execute=args.execute)}
     elif args.command == "hotkey":
@@ -88,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "scroll":
         payload = {"ok": True, "operation": "scroll", "result": backend.scroll(args.clicks, execute=args.execute)}
     elif args.command == "drag":
-        payload = {"ok": True, "operation": "drag", "result": backend.drag(args.start_x, args.start_y, args.end_x, args.end_y, args.button, execute=args.execute)}
+        payload = {"ok": True, "operation": "drag", "result": backend.drag(args.start_x, args.start_y, args.end_x, args.end_y, args.button, execute=args.execute, human_like=args.human_like)}
     elif args.command == "screenshot":
         payload = {"ok": True, "operation": "screenshot", "result": backend.screenshot(args.path, execute=args.execute)}
     elif args.command == "window-list":

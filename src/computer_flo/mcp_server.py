@@ -36,11 +36,12 @@ class ComputerFloMCPServer:
         return [
             {"name": "computer.observe", "description": "Observe desktop capabilities and browser profile state", "inputSchema": _schema({})},
             {"name": "computer.screenshot", "description": "Capture a desktop screenshot", "inputSchema": _schema({"path": {"type": "string"}, **executable}, ["path"])},
-            {"name": "computer.click", "description": "Move mouse and click", "inputSchema": _schema({"x": {"type": "integer"}, "y": {"type": "integer"}, "button": {"type": "integer", "default": 1}, **executable}, ["x", "y"])},
+            {"name": "computer.move", "description": "Move mouse cursor; supports human_like smooth movement where backend supports it", "inputSchema": _schema({"x": {"type": "integer"}, "y": {"type": "integer"}, "human_like": {"type": "boolean", "default": False}, "start_x": {"type": "integer"}, "start_y": {"type": "integer"}, **executable}, ["x", "y"])},
+            {"name": "computer.click", "description": "Move mouse and click", "inputSchema": _schema({"x": {"type": "integer"}, "y": {"type": "integer"}, "button": {"type": "integer", "default": 1}, "human_like": {"type": "boolean", "default": False}, "start_x": {"type": "integer"}, "start_y": {"type": "integer"}, **executable}, ["x", "y"])},
             {"name": "computer.type", "description": "Type text", "inputSchema": _schema({"text": {"type": "string"}, **executable}, ["text"])},
             {"name": "computer.hotkey", "description": "Press a key combination", "inputSchema": _schema({"combo": {"type": "string"}, **executable}, ["combo"])},
             {"name": "computer.scroll", "description": "Scroll wheel clicks", "inputSchema": _schema({"clicks": {"type": "integer"}, **executable}, ["clicks"])},
-            {"name": "computer.drag", "description": "Drag from one coordinate to another", "inputSchema": _schema({"start_x": {"type": "integer"}, "start_y": {"type": "integer"}, "end_x": {"type": "integer"}, "end_y": {"type": "integer"}, "button": {"type": "integer", "default": 1}, **executable}, ["start_x", "start_y", "end_x", "end_y"])},
+            {"name": "computer.drag", "description": "Drag from one coordinate to another", "inputSchema": _schema({"start_x": {"type": "integer"}, "start_y": {"type": "integer"}, "end_x": {"type": "integer"}, "end_y": {"type": "integer"}, "button": {"type": "integer", "default": 1}, "human_like": {"type": "boolean", "default": False}, **executable}, ["start_x", "start_y", "end_x", "end_y"])},
             {"name": "computer.window_list", "description": "List visible windows", "inputSchema": _schema({**executable})},
             {"name": "computer.window_focus", "description": "Focus a window id", "inputSchema": _schema({"window_id": {"type": "string"}, **executable}, ["window_id"])},
             {"name": "computer.clipboard_get", "description": "Read clipboard", "inputSchema": _schema({**executable})},
@@ -55,8 +56,10 @@ class ComputerFloMCPServer:
             return self.backend.observe()
         if name == "computer.screenshot":
             return self.backend.screenshot(str(args.get("path", "/tmp/computer-flo-screenshot.png")), execute=execute)
+        if name == "computer.move":
+            return self.backend.move(int(args["x"]), int(args["y"]), execute=execute, human_like=bool(args.get("human_like", False)), start_x=args.get("start_x"), start_y=args.get("start_y"))
         if name == "computer.click":
-            return self.backend.click(int(args["x"]), int(args["y"]), int(args.get("button", 1)), execute=execute)
+            return self.backend.click(int(args["x"]), int(args["y"]), int(args.get("button", 1)), execute=execute, human_like=bool(args.get("human_like", False)), start_x=args.get("start_x"), start_y=args.get("start_y"))
         if name == "computer.type":
             return self.backend.type_text(str(args["text"]), execute=execute)
         if name == "computer.hotkey":
@@ -64,7 +67,7 @@ class ComputerFloMCPServer:
         if name == "computer.scroll":
             return self.backend.scroll(int(args["clicks"]), execute=execute)
         if name == "computer.drag":
-            return self.backend.drag(int(args["start_x"]), int(args["start_y"]), int(args["end_x"]), int(args["end_y"]), int(args.get("button", 1)), execute=execute)
+            return self.backend.drag(int(args["start_x"]), int(args["start_y"]), int(args["end_x"]), int(args["end_y"]), int(args.get("button", 1)), execute=execute, human_like=bool(args.get("human_like", False)))
         if name == "computer.window_list":
             return self.backend.window_list(execute=execute)
         if name == "computer.window_focus":
@@ -81,8 +84,10 @@ class ComputerFloMCPServer:
         request_id = request.get("id")
         method = request.get("method")
         try:
-            if method in {"initialize", "ping"}:
-                result = {"serverInfo": {"name": "computer-flo", "version": "0.4.0"}, "capabilities": {"tools": {}}}
+            if method == "initialize":
+                result = {"protocolVersion": "2024-11-05", "serverInfo": {"name": "computer-flo", "version": "0.4.1"}, "capabilities": {"tools": {}}}
+            elif method in {"ping", "notifications/initialized"}:
+                result = {}
             elif method == "tools/list":
                 result = {"tools": self.list_tools()}
             elif method == "tools/call":

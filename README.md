@@ -12,7 +12,7 @@ Most agents need the same handful of computer-use primitives:
 
 - observe the current desktop/session
 - capture screenshots
-- click, type, drag, scroll, and press hotkeys
+- move, click, type, drag, scroll, and press hotkeys
 - list/focus windows
 - read/write the clipboard
 - inspect browser profile state
@@ -29,6 +29,7 @@ Without a stable runtime, every agent and every VM ends up with its own one-off 
 - macOS backend through Peekaboo, with `screencapture` fallback for screenshots
 - MCP-style JSON-RPC stdio server for agent integration
 - Browser profile detection for Chrome, Chromium, Brave, and Firefox
+- OpenHuman-inspired human mouse paths: smooth `computer.move`, optional human-like click/drag movement, coordinate validation, and MCP exposure
 - Digital Flow workflow modules, starting with the GoHighLevel automation framework
 - Unit-tested backend and command behavior
 
@@ -38,6 +39,7 @@ Computer Flo exposes these operations through the CLI and MCP server:
 
 - `computer.observe`
 - `computer.screenshot`
+- `computer.move`
 - `computer.click`
 - `computer.type`
 - `computer.hotkey`
@@ -134,6 +136,12 @@ Observe capabilities:
 
 ```bash
 computer-flo --backend auto observe --json
+```
+
+Plan a human-like cursor move without executing it:
+
+```bash
+computer-flo --backend auto move 960 540 --human-like --json
 ```
 
 Plan a click without executing it:

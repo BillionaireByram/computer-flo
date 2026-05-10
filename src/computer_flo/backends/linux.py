@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import time
 
+from computer_flo.human_mouse import HumanPathOptions, human_path, validate_coord
 from computer_flo.runner import CommandRunner
 
 
@@ -28,7 +30,7 @@ class LinuxBackend:
         tools = {name: {"available": self.runner.which(name) is not None, "path": self.runner.which(name)} for name in LINUX_TOOLS}
         operations = ["observe", "browser_state"]
         if tools["xdotool"]["available"] or tools["ydotool"]["available"]:
-            operations.extend(["click", "type", "hotkey", "scroll", "drag"])
+            operations.extend(["move", "click", "type", "hotkey", "scroll", "drag"])
         if tools["scrot"]["available"] or tools["import"]["available"] or tools["grim"]["available"]:
             operations.append("screenshot")
         if tools["wmctrl"]["available"]:
@@ -40,7 +42,29 @@ class LinuxBackend:
     def observe(self) -> dict:
         return {"capabilities": self.capabilities(), "browser_state": self.browser_state()}
 
-    def click(self, x: int, y: int, button: int = 1, *, execute: bool = False) -> dict:
+    def move(self, x: int, y: int, *, execute: bool = False, human_like: bool = False, start_x: int | None = None, start_y: int | None = None) -> dict:
+        validate_coord("x", x)
+        validate_coord("y", y)
+        if human_like and self.runner.which("xdotool"):
+            start = (int(start_x or 0), int(start_y or 0))
+            steps = human_path(start, (x, y), HumanPathOptions())
+            commands = [["xdotool", "mousemove", str(px), str(py)] for px, py, _ in steps]
+            return self._plan_or_run_sequence("move", commands, execute, extra={"human_like": True, "path": steps})
+        if self.runner.which("xdotool") or not self.runner.which("ydotool"):
+            argv = ["xdotool", "mousemove", str(x), str(y)]
+        else:
+            argv = ["ydotool", "mousemove", "--absolute", str(x), str(y)]
+        return self._plan_or_run("move", argv, execute, extra={"human_like": False})
+
+    def click(self, x: int, y: int, button: int = 1, *, execute: bool = False, human_like: bool = False, start_x: int | None = None, start_y: int | None = None) -> dict:
+        if human_like and self.runner.which("xdotool"):
+            validate_coord("x", x)
+            validate_coord("y", y)
+            start = (int(start_x or 0), int(start_y or 0))
+            steps = human_path(start, (x, y), HumanPathOptions())
+            commands = [["xdotool", "mousemove", str(px), str(py)] for px, py, _ in steps]
+            commands.append(["xdotool", "click", str(button)])
+            return self._plan_or_run_sequence("click", commands, execute, extra={"human_like": True, "path": steps})
         if self.runner.which("xdotool") or not self.runner.which("ydotool"):
             argv = ["xdotool", "mousemove", str(x), str(y), "click", str(button)]
         else:
@@ -64,7 +88,13 @@ class LinuxBackend:
         argv = ["xdotool", "click", "--repeat", str(abs(clicks)), button]
         return self._plan_or_run("scroll", argv, execute)
 
-    def drag(self, start_x: int, start_y: int, end_x: int, end_y: int, button: int = 1, *, execute: bool = False) -> dict:
+    def drag(self, start_x: int, start_y: int, end_x: int, end_y: int, button: int = 1, *, execute: bool = False, human_like: bool = False) -> dict:
+        if human_like and self.runner.which("xdotool"):
+            steps = human_path((start_x, start_y), (end_x, end_y), HumanPathOptions())
+            commands = [["xdotool", "mousemove", str(start_x), str(start_y)], ["xdotool", "mousedown", str(button)]]
+            commands.extend([["xdotool", "mousemove", str(px), str(py)] for px, py, _ in steps])
+            commands.append(["xdotool", "mouseup", str(button)])
+            return self._plan_or_run_sequence("drag", commands, execute, extra={"human_like": True, "path": [(start_x, start_y, 0), *steps, (end_x, end_y, 0)]})
         argv = [
             "xdotool",
             "mousemove", str(start_x), str(start_y),
@@ -139,6 +169,32 @@ class LinuxBackend:
             run = self.runner.run(argv)
         payload["status"] = "executed" if run["exit_code"] == 0 else "failed"
         payload["execution"] = run
+        return payload
+
+    def _plan_or_run_sequence(self, operation: str, commands: list[list[str]], execute: bool, extra: dict | None = None) -> dict:
+        payload = {"operation": operation, "status": "planned", "commands": commands}
+        if extra:
+            payload.update(extra)
+        if not execute:
+            return payload
+        executions = []
+        path = payload.get("path") if isinstance(payload.get("path"), list) else []
+        for idx, argv in enumerate(commands):
+            run = self.runner.run(argv)
+            executions.append({"argv": argv, **run})
+            if run.get("exit_code") != 0:
+                payload["status"] = "failed"
+                payload["executions"] = executions
+                return payload
+            if idx < len(path):
+                try:
+                    dwell_ms = int(path[idx][2])
+                except Exception:
+                    dwell_ms = 0
+                if dwell_ms > 0:
+                    time.sleep(dwell_ms / 1000)
+        payload["status"] = "executed"
+        payload["executions"] = executions
         return payload
 
     def _parse_wmctrl(self, stdout: str) -> list[dict]:

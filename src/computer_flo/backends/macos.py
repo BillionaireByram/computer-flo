@@ -26,7 +26,7 @@ class PeekabooBackend:
         screencapture_available = screencapture_path is not None
         operations = ["observe"]
         if peekaboo_available:
-            operations.extend(["screenshot", "click", "type", "hotkey", "scroll", "drag", "window_list", "window_focus"])
+            operations.extend(["move", "screenshot", "click", "type", "hotkey", "scroll", "drag", "window_list", "window_focus"])
         elif screencapture_available:
             operations.append("screenshot")
         return {
@@ -43,11 +43,19 @@ class PeekabooBackend:
     def observe(self) -> dict:
         return {"capabilities": self.capabilities(), "browser_state": self.browser_state()}
 
-    def click(self, x: int, y: int, button: int = 1, *, execute: bool = False) -> dict:
+    def move(self, x: int, y: int, *, execute: bool = False, human_like: bool = False, duration_ms: int = 450, steps: int = 25, start_x: int | None = None, start_y: int | None = None) -> dict:
+        argv = ["peekaboo", "move", f"{x},{y}"]
+        if human_like:
+            argv.extend(["--profile", "human", "--duration", str(duration_ms), "--steps", str(steps)])
+        return self._plan_or_run("move", argv, execute, extra={"human_like": human_like})
+
+    def click(self, x: int, y: int, button: int = 1, *, execute: bool = False, human_like: bool = False, start_x: int | None = None, start_y: int | None = None) -> dict:
         argv = ["peekaboo", "click", "--coords", f"{x},{y}"]
         if button == 2:
             argv.append("--right")
-        return self._plan_or_run("click", argv, execute)
+        if human_like:
+            argv.extend(["--input-strategy", "synthFirst"])
+        return self._plan_or_run("click", argv, execute, extra={"human_like": human_like})
 
     def type_text(self, text: str, *, execute: bool = False) -> dict:
         return self._plan_or_run("type", ["peekaboo", "type", text], execute)
@@ -59,11 +67,13 @@ class PeekabooBackend:
         direction = "up" if clicks > 0 else "down"
         return self._plan_or_run("scroll", ["peekaboo", "scroll", "--direction", direction, "--amount", str(abs(clicks))], execute)
 
-    def drag(self, start_x: int, start_y: int, end_x: int, end_y: int, button: int = 1, *, execute: bool = False) -> dict:
+    def drag(self, start_x: int, start_y: int, end_x: int, end_y: int, button: int = 1, *, execute: bool = False, human_like: bool = False) -> dict:
         argv = ["peekaboo", "drag", "--from-coords", f"{start_x},{start_y}", "--to-coords", f"{end_x},{end_y}"]
+        if human_like:
+            argv.extend(["--profile", "human", "--duration", "700", "--steps", "25"])
         if button != 1:
             argv.extend(["--modifiers", f"button{button}"])
-        return self._plan_or_run("drag", argv, execute)
+        return self._plan_or_run("drag", argv, execute, extra={"human_like": human_like})
 
     def screenshot(self, path: str, *, execute: bool = False) -> dict:
         if self.runner.which("peekaboo"):
