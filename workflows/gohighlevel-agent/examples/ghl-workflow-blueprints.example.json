@@ -1,0 +1,19 @@
+{
+  "version": "example",
+  "locationId": "REPLACE_WITH_LOCATION_ID",
+  "snapshotName": "Optional Snapshot Name",
+  "note": "Generic Digital Flow GHL workflow blueprint example. Copy into a client profile or pass with --blueprint.",
+  "funnelWorkflows": [
+    {
+      "name": "Example - Lead Opt In",
+      "trigger": "Form submitted: Example Form",
+      "actions": [
+        "Add tag: Example - Opt In",
+        "Send welcome email",
+        "Send welcome SMS"
+      ]
+    }
+  ],
+  "deliveryWorkflows": [],
+  "snapshotClientWorkflows": []
+}

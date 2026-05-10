@@ -1,0 +1,13 @@
+{
+  "profile": "tax-mogul-os",
+  "owner": "Digital Flow",
+  "client_project_root": "/Users/puregeniushq/projects/clients/sydnejones",
+  "company_id": "63DRJgdxngR4efBRKNac",
+  "source_location_id": "TCtjYrl5wIdLwd4aCham",
+  "snapshot_location_id": "H1QYsacGPrUS2ZTqJSWX",
+  "blueprint_path": "/Users/puregeniushq/projects/clients/sydnejones/automation/ghl-workflow-blueprints.json",
+  "build_cards_path": "/Users/puregeniushq/projects/clients/sydnejones/automation/highlevel-workflow-build-cards.md",
+  "build_status_path": "/Users/puregeniushq/projects/clients/sydnejones/automation/ghl-build-status-2026-05-01.md",
+  "credential_map_path": "/Users/puregeniushq/projects/clients/sydnejones/infra/tax-mogul-os-runtime/knowledge/ghl-credential-map.md",
+  "notes": "Client-specific profile for Tax Mogul/Sydne. The reusable GHL agent framework remains canonical under Digital Flow."
+}

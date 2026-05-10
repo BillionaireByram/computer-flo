@@ -29,6 +29,7 @@ Without a stable runtime, every agent and every VM ends up with its own one-off 
 - macOS backend through Peekaboo, with `screencapture` fallback for screenshots
 - MCP-style JSON-RPC stdio server for agent integration
 - Browser profile detection for Chrome, Chromium, Brave, and Firefox
+- Digital Flow workflow modules, starting with the GoHighLevel automation framework
 - Unit-tested backend and command behavior
 
 ## Tool surface
@@ -47,6 +48,24 @@ Computer Flo exposes these operations through the CLI and MCP server:
 - `computer.clipboard_get`
 - `computer.clipboard_set`
 - `computer.browser_state`
+
+## Workflow modules
+
+Computer Flo also carries higher-level agent workflow modules that use the computer-use/runtime layer as part of Digital Flow automation.
+
+Current modules:
+
+- `workflows/gohighlevel-agent/` — Digital Flow's reusable GoHighLevel automation framework for API-first asset setup, isolated browser launch, workflow blueprint compilation, inventory, and UI-builder handoff.
+
+Quick GHL checks:
+
+```bash
+cd workflows/gohighlevel-agent
+python3 ghl_agent.py doctor
+python3 ghl_agent.py --profile client-profiles/tax-mogul-os.json compile --workflow-name "TTM - OS Purchase Fulfillment" --out /tmp/ghl-plan.json
+```
+
+Never commit `env.local` or live GHL credentials. Use `env.example` as the template.
 
 ## Requirements
 
