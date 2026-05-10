@@ -144,6 +144,24 @@ Plan a human-like cursor move without executing it:
 computer-flo --backend auto move 960 540 --human-like --json
 ```
 
+Execute a human-like move with the optional on-demand electric-blue AI cursor overlay on macOS:
+
+```bash
+computer-flo --backend macos move 960 540 --human-like --execute --json
+```
+
+The glow overlay is intentionally not always-on. It appears only during executed `move`, `click`, and `drag` actions that pass `--human-like`, then shuts itself down. Build or refresh it with:
+
+```bash
+tools/build-cursor-glow.sh
+```
+
+Disable the visual effect for automation-only runs:
+
+```bash
+COMPUTER_FLO_CURSOR_GLOW_DISABLED=1 computer-flo --backend macos move 960 540 --human-like --execute --json
+```
+
 Plan a click without executing it:
 
 ```bash

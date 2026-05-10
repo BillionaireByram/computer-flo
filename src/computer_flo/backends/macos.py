@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
+import subprocess
+import time
 
 from computer_flo.runner import CommandRunner
 
@@ -124,10 +127,52 @@ class PeekabooBackend:
         if not execute:
             return payload
         stdin = payload.get("stdin") if isinstance(payload.get("stdin"), str) else None
+        glow = self._start_cursor_glow(operation, payload)
         try:
-            run = self.runner.run(argv, stdin=stdin)
-        except TypeError:
-            run = self.runner.run(argv)
+            try:
+                run = self.runner.run(argv, stdin=stdin)
+            except TypeError:
+                run = self.runner.run(argv)
+        finally:
+            self._stop_cursor_glow(glow)
         payload["status"] = "executed" if run["exit_code"] == 0 else "failed"
         payload["execution"] = run
+        if glow is not None:
+            payload["cursor_overlay"] = "electric-blue-futuristic-on-demand"
         return payload
+
+    def _cursor_glow_path(self) -> str | None:
+        return os.environ.get("COMPUTER_FLO_CURSOR_GLOW") or self.runner.which("computer-flo-cursor-glow")
+
+    def _start_cursor_glow(self, operation: str, payload: dict) -> subprocess.Popen | None:
+        if operation not in {"move", "click", "drag"} or not payload.get("human_like"):
+            return None
+        if os.environ.get("COMPUTER_FLO_CURSOR_GLOW_DISABLED") in {"1", "true", "yes"}:
+            return None
+        path = self._cursor_glow_path()
+        if not path:
+            return None
+        try:
+            proc = subprocess.Popen(
+                [path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            time.sleep(0.08)
+            return proc
+        except OSError:
+            return None
+
+    def _stop_cursor_glow(self, proc: subprocess.Popen | None) -> None:
+        if proc is None:
+            return
+        if proc.poll() is not None:
+            return
+        proc.terminate()
+        try:
+            proc.wait(timeout=1.0)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=1.0)
